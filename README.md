@@ -15,8 +15,7 @@ $ cargo install --git https://github.com/mbr/humblegen-rs
 ```
 
 ## Usage
-
-Create a 
+Create a <!-- TODO: Finish this sentence -->
 Check out `generator/tests/rust/showcase/spec.humble` for an overview of the format.
 Then write your own humblespec in `protocol.humble`
 
