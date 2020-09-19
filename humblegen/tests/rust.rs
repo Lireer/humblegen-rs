@@ -80,7 +80,7 @@ impl RustTestCase {
         }
 
         Ok(RustTestCase {
-            name: name.to_string(),
+            name,
             humble_spec: humble_spec.must_exist()?,
             humble_rust_out: humble_rust_out.must_exist()?,
             main: main.must_exist()?,

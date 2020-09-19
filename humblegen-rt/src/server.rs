@@ -49,7 +49,7 @@ pub async fn listen_and_run_forever(
     Ok(())
 }
 
-const REQUEST_ID_HEADER_NAME: &'static str = "Request-ID";
+const REQUEST_ID_HEADER_NAME: &str = "Request-ID";
 
 /// The routine that maps an incoming hyper request to a service in `services`,
 /// and invokes the service's dispatcher.
