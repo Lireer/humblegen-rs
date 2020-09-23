@@ -31,7 +31,6 @@ use crate::ast;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 
-use super::fmt_opt_string;
 use super::generate_type_ident;
 
 /// Lowered representation of an `ast::ServiceDef`.
@@ -436,7 +435,7 @@ fn lower_all_services<'a, I: Iterator<Item = &'a ast::ServiceDef>>(
     all_services
         .map(|sdef| Service {
             trait_name: format_ident!("{}", sdef.name),
-            trait_comment: fmt_opt_string(&sdef.doc_comment).to_string(),
+            trait_comment: sdef.doc_comment.unformatted().to_string(),
             routes_factory_name: format_ident!("routes_{}", sdef.name),
             service_routes: sdef
                 .endpoints
@@ -521,7 +520,7 @@ fn lower_service_route(endpoint: &ast::ServiceEndpoint) -> ServiceRoute {
     );
 
     let doc_comment = {
-        let doc_comment = fmt_opt_string(&endpoint.doc_comment);
+        let doc_comment = endpoint.doc_comment.unformatted();
         quote! { #[doc = #doc_comment] }
     };
 

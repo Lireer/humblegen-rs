@@ -79,7 +79,7 @@ impl IndentWriter {
     }
 }
 
-fn generate_doc_comment(_doc_comment: &Option<String>) -> String {
+fn generate_doc_comment(_doc_comment: &ast::DocComment) -> String {
     // TODO: figure out escaping rules
     // match doc_comment {
     //     Some(ref ds) => format!("{{-| {ds}\n-}}", ds = ds),

@@ -1,5 +1,7 @@
 //! Humble language abstract syntax tree
 
+use comrak::ComrakOptions;
+
 /// A spec node.
 ///
 /// A spec is the top-level item in humble.
@@ -47,7 +49,18 @@ pub struct StructDef {
     /// Fields of the struct.
     pub fields: StructFields,
     /// Documentation comment.
-    pub doc_comment: Option<String>,
+    pub doc_comment: DocComment,
+}
+
+impl StructDef {
+    /// Create a new `StructDef`.
+    pub fn new(name: String, fields: StructFields, doc_comment: Option<String>) -> Self {
+        Self {
+            name,
+            fields,
+            doc_comment: DocComment::from(doc_comment),
+        }
+    }
 }
 
 /// Container of struct fields.
@@ -69,10 +82,19 @@ pub struct EnumDef {
     /// Container of variants.
     pub variants: Vec<VariantDef>,
     /// Documentation comment.
-    pub doc_comment: Option<String>,
+    pub doc_comment: DocComment,
 }
 
 impl EnumDef {
+    /// Create a new `EnumDef`.
+    pub fn new(name: String, variants: Vec<VariantDef>, doc_comment: Option<String>) -> Self {
+        Self {
+            name,
+            variants,
+            doc_comment: DocComment::from(doc_comment),
+        }
+    }
+
     /// Iterate over all complex variants.
     ///
     /// Complex variants are all that are not simple.
@@ -96,7 +118,7 @@ pub struct VariantDef {
     /// Type of the variant.
     pub variant_type: VariantType,
     /// Documentation comment.
-    pub doc_comment: Option<String>,
+    pub doc_comment: DocComment,
 }
 
 /// An (enum-)variant type.
@@ -129,6 +151,15 @@ impl VariantType {
 }
 
 impl VariantDef {
+    /// Create a new `VariantDef`.
+    pub fn new(name: String, variant_type: VariantType, doc_comment: Option<String>) -> Self {
+        Self {
+            name,
+            variant_type,
+            doc_comment: DocComment::from(doc_comment),
+        }
+    }
+
     /// Returns whether or not a variant is simple.
     fn is_simple(&self) -> bool {
         if let VariantType::Simple = self.variant_type {
@@ -153,9 +184,20 @@ pub struct ServiceDef {
     /// The service name. (example: `MonsterApi`)
     pub name: String,
     /// The doc comment of the service. (example: `Monster management service.`)
-    pub doc_comment: Option<String>,
+    pub doc_comment: DocComment,
     /// The service endpoints. (example: see struct `ServiceEndpoint`)
     pub endpoints: Vec<ServiceEndpoint>,
+}
+
+impl ServiceDef {
+    /// Create new `ServiceDef`.
+    pub fn new(name: String, doc_comment: Option<String>, endpoints: Vec<ServiceEndpoint>) -> Self {
+        Self {
+            name,
+            doc_comment: DocComment::from(doc_comment),
+            endpoints,
+        }
+    }
 }
 
 /// An endpoint within a service definition.
@@ -167,9 +209,19 @@ pub struct ServiceDef {
 #[derive(Debug)]
 pub struct ServiceEndpoint {
     /// The doc comment of the endpoint. (example: `Retrieve all monsters.`)
-    pub doc_comment: Option<String>,
+    pub doc_comment: DocComment,
     /// The route of the endpoint. (example: see struct `ServiceRoute`)
     pub route: ServiceRoute,
+}
+
+impl ServiceEndpoint {
+    /// Create new `ServiceEndpoint`.
+    pub fn new(doc_comment: Option<String>, route: ServiceRoute) -> Self {
+        Self {
+            doc_comment: DocComment::from(doc_comment),
+            route,
+        }
+    }
 }
 
 /// And endpoint's route.
@@ -308,7 +360,17 @@ pub enum ServiceRouteComponent {
 pub struct FieldNode {
     pub pair: FieldDefPair,
     /// Documentation comment.
-    pub doc_comment: Option<String>,
+    pub doc_comment: DocComment,
+}
+
+impl FieldNode {
+    /// Create new `FieldNode`.
+    pub fn new(pair: FieldDefPair, doc_comment: Option<String>) -> Self {
+        Self {
+            pair,
+            doc_comment: DocComment::from(doc_comment),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -393,5 +455,63 @@ impl TupleDef {
     /// Get a reference to the tuple components.
     pub fn elements(&self) -> &Vec<TypeIdent> {
         &self.0
+    }
+}
+
+/// A documentation string.
+#[derive(Debug, Clone)]
+pub struct DocComment {
+    raw: Option<String>,
+    options: ComrakOptions,
+}
+
+impl DocComment {
+    /// Create a new `DocComment`.
+    pub fn new(raw: String, options: ComrakOptions) -> Self {
+        Self {
+            raw: Some(raw),
+            options,
+        }
+    }
+
+    /// Gives access to the documentation without any formatting.
+    /// Returns an empty string if documentation was provided.
+    pub fn unformatted(&self) -> &str {
+        self.raw.as_deref().unwrap_or("")
+    }
+
+    /// Set the options to parse and render the documentation.
+    pub fn set_options(&mut self, options: ComrakOptions) {
+        self.options = options;
+    }
+
+    /// Converts the markdown documentation into HTML.
+    pub fn to_html(&self) -> String {
+        match &self.raw {
+            None => "".to_owned(),
+            Some(raw) => comrak::markdown_to_html(raw, &self.options),
+        }
+    }
+
+    /// Converts the first line of the documentation into HTML.
+    pub fn summary_to_html(&self) -> String {
+        comrak::markdown_to_html(
+            self.raw
+                .as_deref()
+                .unwrap_or("")
+                .lines()
+                .next()
+                .unwrap_or(""),
+            &self.options,
+        )
+    }
+}
+
+impl From<Option<String>> for DocComment {
+    fn from(opt_str: Option<String>) -> Self {
+        DocComment {
+            raw: opt_str,
+            options: ComrakOptions::default(),
+        }
     }
 }

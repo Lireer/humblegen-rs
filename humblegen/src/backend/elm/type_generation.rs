@@ -14,7 +14,7 @@ pub(crate) fn generate_struct_def(
 
 pub(crate) fn generate_struct_def_from_parts(
     def_name: &str,
-    def_doc_comment: &Option<String>,
+    def_doc_comment: &ast::DocComment,
     def_fields: &ast::StructFields,
     file: &mut IndentWriter,
 ) -> Result<(), LibError> {
@@ -103,7 +103,7 @@ fn generate_enum_variant_anonymous_constructors(
     for variant in def.variants.iter() {
         if let ast::VariantType::Struct(ref fields) = variant.variant_type {
             let def_name = enum_anonymous_struct_constructor_name(&def.name, &variant.name);
-            generate_struct_def_from_parts(&def_name, &None, fields, file)?;
+            generate_struct_def_from_parts(&def_name, &ast::DocComment::from(None), fields, file)?;
         }
     }
 

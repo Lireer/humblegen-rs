@@ -19,15 +19,10 @@ fn fmt_ident(ident: &str) -> proc_macro2::Ident {
     quote::format_ident!("{}", ident)
 }
 
-/// Helper function to format an optional string as a string.
-fn fmt_opt_string(s: &Option<String>) -> &str {
-    s.as_ref().map(|s| s.as_str()).unwrap_or("")
-}
-
 /// Generate rust code for a struct definition.
 pub(crate) fn generate_struct_def(sdef: &ast::StructDef) -> TokenStream {
     let ident = fmt_ident(&sdef.name);
-    let doc_comment = fmt_opt_string(&sdef.doc_comment);
+    let doc_comment = sdef.doc_comment.unformatted();
     let fields: Vec<_> = sdef.fields.iter().map(generate_pub_field_node).collect();
 
     quote!(
@@ -42,7 +37,7 @@ pub(crate) fn generate_struct_def(sdef: &ast::StructDef) -> TokenStream {
 /// Generate rust code for an enum definition.
 pub(crate) fn generate_enum_def(edef: &ast::EnumDef) -> TokenStream {
     let ident = fmt_ident(&edef.name);
-    let doc_comment = fmt_opt_string(&edef.doc_comment);
+    let doc_comment = edef.doc_comment.unformatted();
 
     let variants: Vec<_> = edef.variants.iter().map(generate_variant).collect();
 
@@ -66,7 +61,7 @@ fn generate_field_def_pair(pair: &ast::FieldDefPair) -> TokenStream {
 /// Even though all fields are pub in generated code, fields in a `pub enum` cannot carry an
 /// additional `pub` qualifier.
 fn generate_pub_field_node(field: &ast::FieldNode) -> TokenStream {
-    let doc_comment = fmt_opt_string(&field.doc_comment);
+    let doc_comment = field.doc_comment.unformatted();
     let attributes = generate_field_attributes(&field.pair.type_ident);
     let field = generate_field_def_pair(&field.pair);
     quote! {
@@ -78,7 +73,7 @@ fn generate_pub_field_node(field: &ast::FieldNode) -> TokenStream {
 
 /// Generate rust code for an enum variant.
 fn generate_variant(variant: &ast::VariantDef) -> TokenStream {
-    let doc_comment = fmt_opt_string(&variant.doc_comment);
+    let doc_comment = variant.doc_comment.unformatted();
     let ident = fmt_ident(&variant.name);
 
     match variant.variant_type {
@@ -91,7 +86,7 @@ fn generate_variant(variant: &ast::VariantDef) -> TokenStream {
             let fields: Vec<_> = fields
                 .iter()
                 .map(|field| {
-                    let doc_comment = fmt_opt_string(&field.doc_comment);
+                    let doc_comment = field.doc_comment.unformatted();
                     let fld = generate_field_def_pair(&field.pair);
                     quote!(#[doc = #doc_comment] #fld)
                 })

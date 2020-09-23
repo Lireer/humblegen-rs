@@ -55,11 +55,7 @@ fn parse_struct_definition(pair: pest::iterators::Pair<Rule>) -> StructDef {
     let name = nodes.next().unwrap().as_span().as_str().to_string();
     let fields = parse_struct_fields(nodes.next().unwrap());
 
-    StructDef {
-        name,
-        fields,
-        doc_comment,
-    }
+    StructDef::new(name, fields, doc_comment)
 }
 
 /// Parse inner struct fields of struct definition.
@@ -87,13 +83,13 @@ fn parse_struct_fields(pair: pest::iterators::Pair<Rule>) -> StructFields {
                     let mut nodes = struct_field_def.into_inner();
                     let ty = nodes.next().unwrap();
                     assert_eq!(nodes.next(), None);
-                    FieldNode {
-                        doc_comment: None,
-                        pair: FieldDefPair {
+                    FieldNode::new(
+                        FieldDefPair {
                             name: ty.as_span().as_str().to_string(),
                             type_ident: parse_type_ident(ty),
                         },
-                    }
+                        None,
+                    )
                 }
                 x => panic!("unexpected token {:?}", x),
             }
@@ -110,11 +106,7 @@ fn parse_enum_definition(pair: pest::iterators::Pair<Rule>) -> EnumDef {
     let name = nodes.next().unwrap().as_span().as_str().to_string();
     let variants = nodes.map(parse_enum_variant_def).collect();
 
-    EnumDef {
-        name,
-        variants,
-        doc_comment,
-    }
+    EnumDef::new(name, variants, doc_comment)
 }
 
 /// Parse enum variant definitions.
@@ -125,31 +117,23 @@ fn parse_enum_variant_def(pair: pest::iterators::Pair<Rule>) -> VariantDef {
 
     if let Some(var) = nodes.next() {
         match var.as_rule() {
-            Rule::struct_fields => VariantDef {
+            Rule::struct_fields => VariantDef::new(
                 name,
-                variant_type: VariantType::Struct(parse_struct_fields(var)),
+                VariantType::Struct(parse_struct_fields(var)),
                 doc_comment,
-            },
-            Rule::tuple_def => VariantDef {
+            ),
+            Rule::tuple_def => {
+                VariantDef::new(name, VariantType::Tuple(parse_tuple_def(var)), doc_comment)
+            }
+            Rule::newtype_def => VariantDef::new(
                 name,
-                variant_type: VariantType::Tuple(parse_tuple_def(var)),
+                VariantType::Newtype(parse_type_ident(var.into_inner().next().unwrap())),
                 doc_comment,
-            },
-            Rule::newtype_def => VariantDef {
-                name,
-                variant_type: VariantType::Newtype(parse_type_ident(
-                    var.into_inner().next().unwrap(),
-                )),
-                doc_comment,
-            },
+            ),
             _ => unreachable!(dbg!(var)),
         }
     } else {
-        VariantDef {
-            name,
-            variant_type: VariantType::Simple,
-            doc_comment,
-        }
+        VariantDef::new(name, VariantType::Simple, doc_comment)
     }
 }
 
@@ -168,7 +152,7 @@ fn parse_struct_field_def_node(pair: pest::iterators::Pair<Rule>) -> FieldNode {
     let mut nodes = pair.into_inner();
     let doc_comment = parse_doc_comment(&mut nodes);
     let pair = parse_struct_field_def_pair(nodes.next().unwrap());
-    FieldNode { pair, doc_comment }
+    FieldNode::new(pair, doc_comment)
 }
 
 fn parse_service_definition(pair: pest::iterators::Pair<Rule>) -> ServiceDef {
@@ -182,11 +166,7 @@ fn parse_service_definition(pair: pest::iterators::Pair<Rule>) -> ServiceDef {
         .map(parse_service_rule)
         .collect();
     assert_eq!(nodes.next(), None);
-    ServiceDef {
-        doc_comment,
-        name,
-        endpoints,
-    }
+    ServiceDef::new(name, doc_comment, endpoints)
 }
 
 fn parse_service_rule(pair: pest::iterators::Pair<Rule>) -> ServiceEndpoint {
@@ -194,7 +174,7 @@ fn parse_service_rule(pair: pest::iterators::Pair<Rule>) -> ServiceEndpoint {
     let doc_comment = parse_doc_comment(&mut nodes);
     let route = parse_service_rule_def(nodes.next().unwrap());
     assert_eq!(nodes.next(), None);
-    ServiceEndpoint { doc_comment, route }
+    ServiceEndpoint::new(doc_comment, route)
 }
 
 fn parse_service_rule_def(pair: pest::iterators::Pair<Rule>) -> ServiceRoute {

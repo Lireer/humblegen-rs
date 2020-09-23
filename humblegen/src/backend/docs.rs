@@ -6,7 +6,6 @@
 use crate::{ast, LibError};
 
 use anyhow::Result;
-use comrak::{markdown_to_html, ComrakOptions};
 use itertools::Itertools;
 
 use std::io::Write;
@@ -66,10 +65,7 @@ impl Context {
                 format!(
                     include_str!("docs/service.html"),
                     serviceName = Escape(service.name.as_str()),
-                    serviceDescription = markdown_to_html(
-                        service.doc_comment.as_deref().unwrap_or(""),
-                        &ComrakOptions::default()
-                    ),
+                    serviceDescription = service.doc_comment.to_html(),
                     serviceEndpoints = self.endpoints_to_html(&service.endpoints),
                 )
             })
@@ -94,10 +90,7 @@ impl Context {
                     include_str!("docs/user_defined_type.html"),
                     kind = "structure",
                     name = Escape(&struct_def.name),
-                    description = markdown_to_html(
-                        struct_def.doc_comment.as_deref().unwrap_or(""),
-                        &ComrakOptions::default()
-                    ),
+                    description = struct_def.doc_comment.to_html(),
                     codeSamples = Self::struct_definition_to_html(struct_def),
                     id = Self::link_to_user_defined_type(&struct_def.name)
                 )),
@@ -105,10 +98,7 @@ impl Context {
                     include_str!("docs/user_defined_type.html"),
                     kind = "enumeration",
                     name = Escape(&enum_def.name),
-                    description = markdown_to_html(
-                        enum_def.doc_comment.as_deref().unwrap_or(""),
-                        &ComrakOptions::default()
-                    ),
+                    description = enum_def.doc_comment.to_html(),
                     codeSamples = Self::enum_definition_to_html(enum_def),
                     id = Self::link_to_user_defined_type(&enum_def.name)
                 )),
@@ -146,10 +136,7 @@ impl Context {
                         include_str!("docs/typedef_table_struct_field.html"),
                         fieldName = Escape(&field_node.pair.name),
                         fieldType = Self::type_ident_to_html(&field_node.pair.type_ident),
-                        fieldComment = markdown_to_html(
-                            &field_node.doc_comment.as_deref().unwrap_or(""),
-                            &ComrakOptions::default()
-                        )
+                        fieldComment = &field_node.doc_comment.to_html(),
                     )
                 })
                 .join("")
@@ -180,10 +167,7 @@ impl Context {
                             variantNestingParent = "",
                             variantName = Escape(&variant.name),
                             variantValue = "<i>empty</i>",
-                            variantComment = markdown_to_html(
-                                &variant.doc_comment.as_deref().unwrap_or(""),
-                                &ComrakOptions::default()
-                            )
+                            variantComment = &variant.doc_comment.to_html(),
                         ),
                         ast::VariantType::Newtype(ty) => format!(
                             include_str!("docs/typedef_table_enum_field.html"),
@@ -191,10 +175,7 @@ impl Context {
                             variantNestingParent = "",
                             variantName = Escape(&variant.name),
                             variantValue = Self::type_ident_to_html(&ty),
-                            variantComment = markdown_to_html(
-                                &variant.doc_comment.as_deref().unwrap_or(""),
-                                &ComrakOptions::default()
-                            )
+                            variantComment = &variant.doc_comment.to_html(),
                         ),
 
                         ast::VariantType::Tuple(tuple) => format!(
@@ -203,10 +184,7 @@ impl Context {
                             variantNestingParent = "",
                             variantName = Escape(&variant.name),
                             variantValue = Self::tuple_def_to_html(tuple),
-                            variantComment = markdown_to_html(
-                                &variant.doc_comment.as_deref().unwrap_or(""),
-                                &ComrakOptions::default()
-                            )
+                            variantComment = &variant.doc_comment.to_html(),
                         ),
                         ast::VariantType::Struct(fields) => {
                             let mut rows = vec![format!(
@@ -215,10 +193,7 @@ impl Context {
                                 variantNestingParent = "",
                                 variantName = Escape(&variant.name),
                                 variantValue = "<i>anonymous structure</i>",
-                                variantComment = markdown_to_html(
-                                    &variant.doc_comment.as_deref().unwrap_or(""),
-                                    &ComrakOptions::default()
-                                )
+                                variantComment = &variant.doc_comment.to_html(),
                             )];
 
                             for field in fields.iter() {
@@ -228,10 +203,7 @@ impl Context {
                                     variantNestingParent = struct_def.name,
                                     variantName = Escape(&field.pair.name),
                                     variantValue = Self::type_ident_to_html(&field.pair.type_ident),
-                                    variantComment = markdown_to_html(
-                                        &field.doc_comment.as_deref().unwrap_or(""),
-                                        &ComrakOptions::default(),
-                                    ),
+                                    variantComment = &field.doc_comment.to_html(),
                                 ));
                             }
                             rows.join("")
@@ -261,16 +233,8 @@ impl Context {
                     httpMethod = endpoint.route.http_method_as_str(),
                     endpointRoute = Self::components_to_html(endpoint.route.components()),
                     endpointLink = Self::components_to_link(&endpoint.route),
-                    endpointDescription = markdown_to_html(
-                        endpoint.doc_comment.as_deref().unwrap_or(""),
-                        &ComrakOptions::default()
-                    ),
-                    endpointSummary = markdown_to_html(
-                        &markdown_get_first_line_as_summary(
-                            endpoint.doc_comment.as_deref().unwrap_or("")
-                        ),
-                        &ComrakOptions::default()
-                    ),
+                    endpointDescription = endpoint.doc_comment.to_html(),
+                    endpointSummary = endpoint.doc_comment.summary_to_html(),
                     endpointReturn = Self::type_ident_to_html(endpoint.route.return_type()),
                     endpointRouteQuery = endpoint
                         .route
@@ -423,15 +387,6 @@ fn inline_svg_icon(class_name: &str, svg: &str) -> String {
         class_name,
         base64::encode(svg)
     )
-}
-
-fn markdown_get_first_line_as_summary(markdown: &str) -> String {
-    let first_sentence = markdown.split("\n\n").next().unwrap_or("");
-    if first_sentence.len() > 100 {
-        format!("{}...", &first_sentence[0..97])
-    } else {
-        first_sentence.to_string()
-    }
 }
 
 #[derive(Default)]
